@@ -1,0 +1,105 @@
+# ─── Risk Policy Configuration ─────────────────────────────
+# This file controls the deterministic scoring engine.
+# The LLM never computes risk — it only explains scores computed here.
+# Hot-reloadable at runtime via the /admin/reload-policy endpoint.
+
+scoring:
+  # Base weights by event type (0.0 – 1.0)
+  event_weights:
+    sanctions_hit: 1.0
+    adverse_media: 0.7
+    pep_association: 0.6
+    regulatory_action: 0.8
+    transaction_anomaly: 0.5
+    ownership_change: 0.4
+    jurisdiction_change: 0.3
+    dormancy_signal: 0.1
+
+  # Severity multipliers
+  severity_multipliers:
+    critical: 2.0
+    high: 1.5
+    medium: 1.0
+    low: 0.5
+    informational: 0.2
+
+  # Jurisdiction risk tiers (ISO 3166-1 alpha-2)
+  jurisdiction_tiers:
+    tier_1:  # FATF blacklist — multiplier 2.0
+      multiplier: 2.0
+      countries:
+        - KP   # North Korea
+        - IR   # Iran
+        - MM   # Myanmar
+    tier_2:  # FATF greylist — multiplier 1.5
+      multiplier: 1.5
+      countries:
+        - SY   # Syria
+        - YE   # Yemen
+        - AF   # Afghanistan
+        - PK   # Pakistan
+        - NG   # Nigeria
+        - TZ   # Tanzania
+        - VN   # Vietnam
+        - JM   # Jamaica
+        - HT   # Haiti
+        - ML   # Mali
+        - BF   # Burkina Faso
+        - CM   # Cameroon
+        - CD   # Congo (DRC)
+        - MZ   # Mozambique
+        - SS   # South Sudan
+    tier_3:  # All other jurisdictions — multiplier 1.0
+      multiplier: 1.0
+
+  # Risk band thresholds (cumulative score)
+  bands:
+    low:
+      min: 0
+      max: 39
+    medium:
+      min: 40
+      max: 59
+    high:
+      min: 60
+      max: 79
+    critical:
+      min: 80
+      max: 100
+
+  # Velocity thresholds (score change per 7-day window)
+  velocity:
+    alert_threshold: 15    # Delta >= 15 in 7 days triggers velocity alert
+    lookback_days: 7
+
+  # Score decay (reduces stale scores over time)
+  decay:
+    enabled: true
+    half_life_days: 90     # Score contribution halves every 90 days
+
+alerts:
+  # Auto-escalation rules
+  auto_escalate_on_sanctions_hit: true
+  auto_sar_on_critical: true
+
+  # Confidence thresholds for entity resolution
+  resolution_confidence:
+    dismiss_below: 0.40
+    review_between: [0.40, 0.75]
+    accept_above: 0.75
+
+screening:
+  # Fuzzy matching configuration
+  fuzzy_threshold: 80       # rapidfuzz token_set_ratio minimum
+  max_candidates: 10        # Max candidates per event
+
+ingestion:
+  # Scheduler intervals (seconds)
+  ingest_interval: 15
+  process_interval: 5
+  sanctions_refresh_hours: 6
+
+audit:
+  # Hash chain algorithm
+  hash_algorithm: sha256
+  # Audit entries are never deleted — append only
